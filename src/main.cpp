@@ -4,6 +4,10 @@
 #include <math.h>
 #include "ukf.h"
 #include "tools.h"
+#include <fstream>
+#include <sstream>
+#include "measurement_package.h"
+#include <stdlib.h>
 
 using namespace std;
 
@@ -26,8 +30,39 @@ std::string hasData(std::string s) {
   return "";
 }
 
-int main()
+void check_args(int argc, char*argv[]){
+  bool num_arguments= false;
+  if (argc == 1) {
+    cerr << "output file is missing"<< endl;
+  } else if (argc == 2) {
+    num_arguments = true;
+  } 
+    else if (argc > 2) {
+    cerr << "Too many arguments.\n";
+    }
+
+  if (!num_arguments) {
+    exit(EXIT_FAILURE);
+}
+}
+
+void out_file(ofstream& outfile, string& file_name){
+
+  if (!outfile.is_open()) {
+    cerr << "Cannot open output file: " << file_name << endl;
+    exit(EXIT_FAILURE);
+  }
+}
+
+int main(int argc, char* argv[])
 {
+  check_args(argc, argv);
+
+  string out_filename= argv[1];
+  ofstream out_file_name(out_filename.c_str(), ofstream::out);
+
+  out_file(out_file_name,out_filename);
+
   uWS::Hub h;
 
   // Create a Kalman Filter instance
@@ -38,7 +73,28 @@ int main()
   vector<VectorXd> estimations;
   vector<VectorXd> ground_truth;
 
-  h.onMessage([&ukf,&tools,&estimations,&ground_truth](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+  float nis_laser_=0;
+  float nis_total_count_laser=0;
+
+  float nis_radar_=0;
+  float nis_total_count_radar=0;
+
+  out_file_name << fixed << setprecision(4) <<"time_stamp" << "\t";
+  out_file_name << fixed << setprecision(4) <<"px" << "\t";
+  out_file_name << fixed << setprecision(4) <<"py" << "\t";
+  out_file_name <<fixed << setprecision(4) << "v_" << "\t";
+  out_file_name<< fixed << setprecision(4) <<"yaw_angle" << "\t";
+  out_file_name << fixed << setprecision(4) <<"yaw_rate" << "\t";
+  out_file_name << fixed << setprecision(4) <<"sensor_type" << "\t";
+  out_file_name<< fixed << setprecision(4) <<"NIS" << "\t";  
+  out_file_name << fixed << setprecision(4) <<"px_RMSE" << "\t";
+  out_file_name<< fixed << setprecision(4) <<"py_RMSE" << "\t";
+  out_file_name << fixed << setprecision(4) <<"vx_RMSE" << "\t";
+  out_file_name << fixed << setprecision(4) <<"vy_RMSE" << "\n";
+  
+
+  h.onMessage([&ukf,&tools,&estimations,&ground_truth, &out_file_name, &nis_laser_, &nis_radar_,
+  &nis_total_count_laser, &nis_total_count_radar](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -69,6 +125,7 @@ int main()
     	  if (sensor_type.compare("L") == 0) {
       	  		meas_package.sensor_type_ = MeasurementPackage::LASER;
           		meas_package.raw_measurements_ = VectorXd(2);
+              
           		float px;
       	  		float py;
           		iss >> px;
@@ -76,6 +133,7 @@ int main()
           		meas_package.raw_measurements_ << px, py;
           		iss >> timestamp;
           		meas_package.timestamp_ = timestamp;
+              out_file_name<<fixed << setprecision(4) <<meas_package.timestamp_ <<"\t";
           } else if (sensor_type.compare("R") == 0) {
 
       	  		meas_package.sensor_type_ = MeasurementPackage::RADAR;
@@ -89,8 +147,9 @@ int main()
           		meas_package.raw_measurements_ << ro,theta, ro_dot;
           		iss >> timestamp;
           		meas_package.timestamp_ = timestamp;
+              out_file_name<<fixed << setprecision(4) <<meas_package.timestamp_ <<"\t";
           }
-          float x_gt;
+        float x_gt;
     	  float y_gt;
     	  float vx_gt;
     	  float vy_gt;
@@ -104,9 +163,20 @@ int main()
     	  gt_values(2) = vx_gt;
     	  gt_values(3) = vy_gt;
     	  ground_truth.push_back(gt_values);
+
+        
           
           //Call ProcessMeasurment(meas_package) for Kalman filter
-    	  ukf.ProcessMeasurement(meas_package);    	  
+    	  ukf.ProcessMeasurement(meas_package);
+        out_file_name<<fixed << setprecision(4) <<ukf.x_(0)<<"\t";
+        out_file_name<<fixed << setprecision(4) <<ukf.x_(1)<<"\t";
+        out_file_name<<fixed << setprecision(4) <<ukf.x_(2)<<"\t";
+        out_file_name<<fixed << setprecision(4) <<ukf.x_(3)<<"\t";
+        out_file_name<<fixed << setprecision(4) <<ukf.x_(4)<<"\t";
+        
+
+
+    
 
     	  //Push the current estimated x,y positon from the Kalman filter's state vector
 
@@ -127,7 +197,32 @@ int main()
     	  
     	  estimations.push_back(estimate);
 
+        if(meas_package.sensor_type_ == MeasurementPackage::LASER){
+
+          if(ukf.NIS_Lidar_>5.991){
+            nis_laser_+=1;
+          }
+          nis_total_count_laser+=1;
+          cout<<(nis_laser_/nis_total_count_laser)*100<<'L'<<endl;
+          out_file_name<<fixed << setprecision(4) <<'L'<<"\t";
+          out_file_name<<fixed << setprecision(4) <<ukf.NIS_Lidar_<<"\t";
+        }
+        else if(meas_package.sensor_type_ == MeasurementPackage::RADAR){
+           if(ukf.NIS_radar_>7.815){
+            nis_radar_ +=1;
+          }
+          nis_total_count_radar+=1;
+          cout<<(nis_radar_/nis_total_count_radar)*100<<'R'<<endl;
+          out_file_name<<fixed << setprecision(4) <<'R'<<"\t";
+          out_file_name<<fixed << setprecision(4) <<ukf.NIS_radar_<<"\t";
+          
+        }
+
     	  VectorXd RMSE = tools.CalculateRMSE(estimations, ground_truth);
+        out_file_name<<fixed << setprecision(4) <<RMSE(0)<<"\t";
+        out_file_name<<fixed << setprecision(4) <<RMSE(1)<<"\t";
+        out_file_name<<fixed << setprecision(4) <<RMSE(2)<<"\t";
+        out_file_name<<fixed << setprecision(4) <<RMSE(3)<<endl;
 
           json msgJson;
           msgJson["estimate_x"] = p_x;
@@ -184,25 +279,13 @@ int main()
     std::cerr << "Failed to listen to port" << std::endl;
     return -1;
   }
+
   h.run();
+  if (out_file_name.is_open()){
+    out_file_name.close();
+  }
+  
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

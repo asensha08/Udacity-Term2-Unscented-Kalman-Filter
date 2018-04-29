@@ -11,6 +11,7 @@ using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
 class UKF {
+  
 public:
 
   ///* initially set to false, set to true in first call of ProcessMeasurement
@@ -67,7 +68,9 @@ public:
   ///* Sigma point spreading parameter
   double lambda_;
 
+  double NIS_radar_;
 
+  double NIS_Lidar_;
   /**
    * Constructor
    */
