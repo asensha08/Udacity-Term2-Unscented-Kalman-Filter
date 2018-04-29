@@ -11,7 +11,7 @@
 
 using namespace std;
 
-// for convenience
+// for convenience.
 using json = nlohmann::json;
 
 // Checks if the SocketIO event has JSON data.
@@ -203,7 +203,7 @@ int main(int argc, char* argv[])
             nis_laser_+=1;
           }
           nis_total_count_laser+=1;
-          cout<<(nis_laser_/nis_total_count_laser)*100<<'L'<<endl;
+          cout<<(nis_laser_/nis_total_count_laser)*100<<'L'<<endl;// In the ouput. Check the last line. Will show % of measurement estimate above 5.99
           out_file_name<<fixed << setprecision(4) <<'L'<<"\t";
           out_file_name<<fixed << setprecision(4) <<ukf.NIS_Lidar_<<"\t";
         }
@@ -212,7 +212,7 @@ int main(int argc, char* argv[])
             nis_radar_ +=1;
           }
           nis_total_count_radar+=1;
-          cout<<(nis_radar_/nis_total_count_radar)*100<<'R'<<endl;
+          cout<<(nis_radar_/nis_total_count_radar)*100<<'R'<<endl;// In the ouput. Check 1 line above the last line. Will show % of measurement estimate above 7.8
           out_file_name<<fixed << setprecision(4) <<'R'<<"\t";
           out_file_name<<fixed << setprecision(4) <<ukf.NIS_radar_<<"\t";
           

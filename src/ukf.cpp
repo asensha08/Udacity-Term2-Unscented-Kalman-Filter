@@ -36,6 +36,8 @@ UKF::UKF() {
   //std_a_ = 2.02;//p=20//0.3962,0.1001//0.4265
 
   //std_a_ = 1.95;//p=24//0.3962,0.1001//0.4265
+
+  //Tuned Value- Amazing Results
   std_a_ = 0.7;//p=24//0.3962,0.1001//0.4265
   
   // Process nose standard deviation yaw acceleration in rad/s^2
@@ -47,6 +49,8 @@ UKF::UKF() {
   //std_yawdd_ = 0.75;//p=20//0.3988,0.1004//0.4282
   //std_yawdd_ = 0.70;//p=20//0.3973,0.1002//0.4272
   //std_yawdd_ = 0.65;//p=20//0.3962,0.1001//0.4265
+
+  //Tuned Value - Amazing Results
   std_yawdd_ = 0.65;//p=20//0.3962,0.1001//0.4265
   
   
@@ -121,7 +125,8 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
         if(meas_package.sensor_type_==MeasurementPackage::LASER && use_laser_){
 
    /**
-    * Initialize state
+    * Initialize state.
+    * Note: I have initialized the state and covriance depending on sensor type 
     * 
   
   */
